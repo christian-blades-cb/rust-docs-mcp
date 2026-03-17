@@ -79,8 +79,8 @@ async fn check_nightly_toolchain() -> DiagnosticResult {
             let toolchains = String::from_utf8_lossy(&output.stdout);
             if toolchains.contains("nightly") {
                 // Try to get nightly version
-                match Command::new("rustc")
-                    .args(["+nightly", "--version"])
+                match Command::new("rustup")
+                    .args(["run", "nightly", "rustc", "--version"])
                     .output()
                 {
                     Ok(nightly_output) if nightly_output.status.success() => {

@@ -66,9 +66,13 @@ pub async fn test_rustdoc_json() -> Result<()> {
     );
 
     // Try to generate JSON documentation using the pinned toolchain
-    let output = Command::new("rustdoc")
+    // Use `rustup run` instead of `+toolchain` syntax so it works even when
+    // rustdoc is not a rustup proxy (e.g. Nix environments).
+    let output = Command::new("rustup")
         .args([
-            &format!("+{REQUIRED_TOOLCHAIN}"),
+            "run",
+            REQUIRED_TOOLCHAIN,
+            "rustdoc",
             "-Z",
             "unstable-options",
             "--output-format",
@@ -91,9 +95,8 @@ pub async fn test_rustdoc_json() -> Result<()> {
 
 /// Get rustdoc version information
 pub async fn get_rustdoc_version() -> Result<String> {
-    let output = Command::new("rustdoc")
-        .arg(format!("+{REQUIRED_TOOLCHAIN}"))
-        .arg("--version")
+    let output = Command::new("rustup")
+        .args(["run", REQUIRED_TOOLCHAIN, "rustdoc", "--version"])
         .output()
         .context("Failed to run rustdoc --version")?;
 
@@ -198,8 +201,13 @@ async fn execute_rustdoc(
     source_path: &Path,
     target_dir: Option<&Path>,
 ) -> Result<std::process::Output> {
-    let mut command = TokioCommand::new("cargo");
-    command.args(args).current_dir(source_path);
+    // Use `rustup run <toolchain> cargo` instead of `cargo +toolchain` so it
+    // works even when cargo is not a rustup proxy (e.g. Nix environments).
+    let mut command = TokioCommand::new("rustup");
+    command
+        .args(["run", REQUIRED_TOOLCHAIN, "cargo"])
+        .args(args)
+        .current_dir(source_path);
 
     // Set custom target directory if provided to avoid conflicts when building
     // multiple workspace members concurrently
@@ -261,7 +269,7 @@ pub async fn run_cargo_rustdoc_json(
     };
     tracing::debug!("{}", log_msg);
 
-    let mut base_args = vec![format!("+{}", REQUIRED_TOOLCHAIN), "rustdoc".to_string()];
+    let mut base_args = vec!["rustdoc".to_string()];
 
     // Add package-specific arguments if provided
     if let Some(pkg) = package {
